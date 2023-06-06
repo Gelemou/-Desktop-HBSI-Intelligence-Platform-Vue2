@@ -10,3 +10,8 @@ export const studentLogin = function (params) {
 export const getGradeYears = function (params) {
     return POST("/student/listGrade", params);
 };
+
+// 获取指定学生特定年份的评分详情
+export const getEvaluateByYear = function (params) {
+    return POST("/score/detail", params);
+};

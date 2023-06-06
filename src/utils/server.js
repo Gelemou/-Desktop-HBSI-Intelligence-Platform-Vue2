@@ -3,10 +3,13 @@ import axios from "axios";
 const SERVER_BASE_URL = "http://101.200.221.213:9202";
 
 axios.defaults.baseURL = SERVER_BASE_URL;
+// 设置默认请求头为存储在浏览器的token
+// axios.defaults.headers.common["token"] = sessionStorage.getItem("token");
 
 // 添加请求拦截器
 axios.interceptors.request.use(
     function (config) {
+        config.headers.token = sessionStorage.getItem("token");
         // 在发送请求之前做些什么
         return config;
     },

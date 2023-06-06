@@ -23,7 +23,7 @@
     font-weight: bold;
     color: #fff;
 }
-/deep/.el-menu-item {
+.el-menu-item {
     display: flex;
     align-items: center;
     height: 48px;
@@ -32,7 +32,8 @@
         font-size: 24px;
     }
 }
-/deep/.is-active {
+// 当menu-item选中时
+.is-active {
     color: #fff !important;
     background-color: #0084fd !important;
 }
@@ -45,6 +46,7 @@
 .rightContent {
     background-color: #f3f3f3;
     overflow: hidden;
+    flex: 1;
 }
 .topHeader {
     height: 54px;
@@ -144,7 +146,12 @@
                 <span class="topTitle">第二课堂智慧平台</span>
             </div>
             <div class="leftList">
-                <el-menu background-color="#3b424a" text-color="#fff">
+                <el-menu
+                    background-color="#3b424a"
+                    text-color="#fff"
+                    :default-active="tabIndex"
+                    @select="getTabIndex($event)"
+                >
                     <el-menu-item index="1">
                         <i class="el-icon-s-flag"></i>
                         <span>思想政治素养</span>
@@ -186,20 +193,30 @@
                     <div class="boxContentHeader">
                         <div>
                             <span class="year">学年</span>
-                            <el-select v-model="value" placeholder="Select">
+                            <el-select
+                                v-model="value"
+                                placeholder="Select"
+                                @change="yearChange($event)"
+                            >
                                 <el-option
                                     v-for="item in options"
                                     :key="item.gradeYear"
                                     :value="item.gradeYear"
                                 ></el-option>
                             </el-select>
-                            <el-button type="primary">查询</el-button>
+                            <el-button
+                                type="primary"
+                                @click="getEvaluateByYearFun()"
+                                >查询</el-button
+                            >
                         </div>
-                        <span class="percent">总分:92</span>
+                        <span class="percent" v-show="show"
+                            >总分:{{ total }}</span
+                        >
                     </div>
-                    <div class="boxContentTable">
+                    <div class="boxContentTable" v-show="show">
                         <el-table
-                            :data="tableData"
+                            :data="currentResult"
                             height="373px"
                             style="width: 100%"
                             :border="true"
@@ -209,57 +226,64 @@
                             }"
                         >
                             <el-table-column
-                                prop="date"
+                                prop="pointName"
                                 label="指标点"
                                 width="160"
                                 align="center"
                             />
                             <el-table-column
-                                prop="name"
+                                prop="pointMemo"
                                 label="评分标准"
                                 width="380"
                                 align="center"
                             />
                             <el-table-column
-                                prop="address"
+                                prop=""
                                 label="佐证资料"
                                 width="200"
                                 align="center"
                             />
                             <el-table-column
-                                prop="address"
                                 label="操作"
                                 width="300"
                                 align="center"
                             >
-                                <div class="percents">
-                                    得分
-                                    <el-input-number
-                                        v-model="num"
-                                        :min="0"
-                                        :max="100"
-                                        controls-position="right"
-                                    ></el-input-number>
-                                </div>
-                                <div class="percentReason">
-                                    得分依据
-                                    <el-input
-                                        v-model="textarea"
-                                        :rows="2"
-                                        type="textarea"
-                                    />
-                                </div>
-                                <el-upload
-                                    v-model:file-list="fileList"
-                                    class="upload-demo"
-                                    action="https://run.mocky.io/v3/9d059bf9-4660-45f2-925d-ce80ad6c4d15"
-                                >
-                                    <el-button
-                                        type="success"
-                                        class="uploadButton"
-                                        >上传文件</el-button
-                                    >
-                                </el-upload>
+                                <el-form slot-scope="scope">
+                                    <el-form-item label="得分">
+                                        <div class="percents">
+                                            <el-input-number
+                                                v-model="scope.row.selfScore"
+                                                :min="0"
+                                                :max="100"
+                                                controls-position="right"
+                                            />
+                                        </div>
+                                    </el-form-item>
+                                    <el-form-item label="">
+                                        <div class="percentReason">
+                                            得分依据
+                                            <el-input
+                                                v-model="scope.row.detail"
+                                                :rows="2"
+                                                type="textarea"
+                                            />
+                                        </div>
+                                    </el-form-item>
+                                    <el-form-item>
+                                        <el-upload
+                                            v-model:file-list="fileList"
+                                            class="upload-demo"
+                                            action="https://run.mocky.io/v3/9d059bf9-4660-45f2-925d-ce80ad6c4d15"
+                                        >
+                                            <el-button
+                                                type="success"
+                                                class="uploadButton"
+                                                icon="el-icon-upload"
+                                                >上传文件</el-button
+                                            >
+                                        </el-upload>
+                                    </el-form-item>
+                                </el-form>
                             </el-table-column>
                         </el-table>
                     </div>
@@ -271,6 +295,7 @@
 
 <script>
 import { getGradeYears } from "@/utils/student";
+import { getEvaluateByYear } from "@/utils/student";
 
 export default {
     name: "HomeView",
@@ -360,6 +385,13 @@ export default {
             xh: "",
             name: "",
             token: "",
+            gradeYear: "1",
+            result: "", // 存放从接口获取的所有数据
+
+            show: 0, // 用于判断是否获取过数据,如果没有获取过,则不显示el-table
+            tabIndex: "1", // menu当前选择的index
+            total: "", // 总分
+            currentResult: [], // 存放接口数据截取完的数据,将数据展示在页面
         };
     },
     mounted() {
@@ -367,19 +399,65 @@ export default {
             this.xh = sessionStorage.xh;
             this.name = sessionStorage.name;
             this.token = sessionStorage.token;
-            this.getYear();
+            // 页面装载时可以获取学年列表,用于在页面显示
+            this.getGradeYearsFun();
+            this.getEvaluateByYearFun();
         } else {
             this.$router.push("/login");
         }
     },
     methods: {
         // 获取学年列表
-        getYear() {
-            getGradeYears({ xh: this.xh }).then((res) => {
+        getGradeYearsFun() {
+            getGradeYears({ studentId: this.xh }).then((res) => {
                 if (res.msg === "成功") {
                     this.options = res.data;
                 }
+                // 当接口有数据时,选择年份框自动选择第一个
+                if (this.options.length > 0) {
+                    this.value = this.options[0].gradeYear;
+                }
             });
+        },
+        // 点击查询按钮后执行,将接口数据存放到result里,将总分存放到total,并调用截取数据selectData()函数
+        getEvaluateByYearFun() {
+            getEvaluateByYear({
+                studentId: this.xh,
+                gradeYear: this.gradeYear,
+            }).then((res) => {
+                if (res.msg === "成功") {
+                    // 可以让总分和表格正常显示
+                    this.show = 1;
+                    this.result = res.data.list;
+                    this.total = res.data.score;
+                    this.selectData();
+                }
+            });
+        },
+        // 当选择学年时执行,将年份赋值为当前选择的年份,gradeYear用于动态选择学年
+        yearChange(e) {
+            this.gradeYear = e;
+        },
+        // 当切换menu-item时执行,tabIndex用于函数selectData()判断接口数据的首字符,并且当切换时调用接口数据显示在页面上
+        getTabIndex(index) {
+            this.tabIndex = index;
+            this.getEvaluateByYearFun();
+        },
+        // 当切换menu-item和点击查询按钮时执行,将原数据result根据所选menu-item的index截取,截取后的数据currenResult展示在页面
+        selectData() {
+            // 获取当前选择的menu-item的index,用于后面的check函数
+            let index = Number.parseInt(this.tabIndex);
+            // 作为slice()方法的参数
+            let start, end;
+            // 使用startsWith()方法判断接口的itemName是否是menu-item当前选择的index,结果会返回boolean值
+            function check(item) {
+                return item.itemName.startsWith(index);
+            }
+            // findIndex()方法有一个参数是check函数,返回第一个符合参数验证的下标
+            start = this.result.findIndex(check);
+            index++;
+            end = this.result.findIndex(check);
+            this.currentResult = this.result.slice(start, end);
         },
     },
 };
