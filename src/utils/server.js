@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const SERVER_BASE_URL = "http://101.200.221.213:9202";
+export const SERVER_BASE_URL = "http://101.200.221.213:9202";
 
 axios.defaults.baseURL = SERVER_BASE_URL;
 // 设置默认请求头为存储在浏览器的token

@@ -97,10 +97,12 @@
 /deep/.el-input__icon {
     height: auto;
 }
-// 查询按钮
-/deep/.el-button {
+// primary类型按钮
+.priButton {
+    width: 60px;
     height: 33px;
     padding-top: 10px;
+    padding-left: 16px;
 }
 /* 总分 */
 .percent {
@@ -135,7 +137,23 @@
 }
 // 上传按钮
 .uploadButton {
+    height: 33px;
+    padding-top: 10px;
     margin-left: -50px;
+}
+// 保存和提交按钮
+.saveAndCommit {
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
+}
+// 保存按钮
+.save {
+    margin-right: 40px;
+}
+// 雷达图
+#echarts {
+    margin: 10px auto;
 }
 </style>
 <template>
@@ -176,7 +194,7 @@
                         <i class="el-icon-picture"></i>
                         <span>学生画像</span>
                     </el-menu-item>
-                    <el-menu-item index="7">
+                    <el-menu-item index="7" @click="logout">
                         <i class="el-icon-s-home"></i>
                         <span>退出</span>
                     </el-menu-item>
@@ -206,6 +224,7 @@
                             </el-select>
                             <el-button
                                 type="primary"
+                                class="priButton"
                                 @click="getEvaluateByYearFun()"
                                 >查询</el-button
                             >
@@ -217,6 +236,7 @@
                     <div class="boxContentTable" v-show="show">
                         <el-table
                             :data="currentResult"
+                            ref="tableRef"
                             height="373px"
                             style="width: 100%"
                             :border="true"
@@ -271,9 +291,13 @@
                                     </el-form-item>
                                     <el-form-item>
                                         <el-upload
-                                            v-model:file-list="fileList"
+                                            :file-list="fileList"
                                             class="upload-demo"
-                                            action="https://run.mocky.io/v3/9d059bf9-4660-45f2-925d-ce80ad6c4d15"
+                                            :action="uploadurl"
+                                            :on-success="uploadSuccess"
+                                            :on-exceed="exceed"
+                                            :headers="myheader"
+                                            :limit="3"
                                         >
                                             <el-button
                                                 type="success"
@@ -286,7 +310,20 @@
                                 </el-form>
                             </el-table-column>
                         </el-table>
+                        <div class="saveAndCommit">
+                            <el-button type="primary" class="save priButton"
+                                >保存</el-button
+                            >
+                            <el-button type="primary" class="priButton"
+                                >提交</el-button
+                            >
+                        </div>
                     </div>
+                    <div
+                        id="echarts"
+                        v-show="!show"
+                        style="width: 600px; height: 404px"
+                    ></div>
                 </div>
             </div>
         </div>
@@ -296,6 +333,7 @@
 <script>
 import { getGradeYears } from "@/utils/student";
 import { getEvaluateByYear } from "@/utils/student";
+import { SERVER_BASE_URL } from "@/utils/server";
 
 export default {
     name: "HomeView",
@@ -380,15 +418,16 @@ export default {
             ],
             num: 0, // 得分
             textarea: "", // 文本域
-            fileList: "", // 上传文件
+            fileList: [], // 上传文件
+            uploadurl: SERVER_BASE_URL + "/attachment/upload", // 上传文件的url
+            myheader: { token: sessionStorage.token },
 
             xh: "",
             name: "",
             token: "",
             gradeYear: "1",
+            show: 1, // 当接口有数据时显示表格内容
             result: "", // 存放从接口获取的所有数据
-
-            show: 0, // 用于判断是否获取过数据,如果没有获取过,则不显示el-table
             tabIndex: "1", // menu当前选择的index
             total: "", // 总分
             currentResult: [], // 存放接口数据截取完的数据,将数据展示在页面
@@ -405,6 +444,47 @@ export default {
         } else {
             this.$router.push("/login");
         }
+        // echarts雷达图设置
+        var myChart = this.$echarts.init(document.getElementById("echarts"));
+        var option = {
+            radar: {
+                indicator: [
+                    { name: "思想政治素养", max: 100 },
+                    { name: "职业技能特长", max: 100 },
+                    { name: "身心健康发展", max: 100 },
+                    { name: "文化艺术修养", max: 100 },
+                    { name: "劳动育人实践", max: 100 },
+                ],
+            },
+            series: [
+                {
+                    name: "Budget vs spending",
+                    type: "radar",
+                    data: [
+                        {
+                            value: [4200, 3000, 20000, 35000, 50000, 18000],
+                            name: "Allocated Budget",
+                        },
+                        {
+                            value: [5000, 14000, 28000, 26000, 42000, 21000],
+                            name: "Actual Spending",
+                        },
+                    ],
+                },
+            ],
+        };
+        option && myChart.setOption(option);
+    },
+    // 监听表格数据,当发生变化时表格滚动到顶部
+    watch: {
+        currentResult: {
+            handler() {
+                this.$nextTick(() => {
+                    // 滚动到顶部
+                    this.$refs.tableRef.bodyWrapper.scrollTop = 0;
+                });
+            },
+        },
     },
     methods: {
         // 获取学年列表
@@ -426,8 +506,6 @@ export default {
                 gradeYear: this.gradeYear,
             }).then((res) => {
                 if (res.msg === "成功") {
-                    // 可以让总分和表格正常显示
-                    this.show = 1;
                     this.result = res.data.list;
                     this.total = res.data.score;
                     this.selectData();
@@ -458,6 +536,25 @@ export default {
             index++;
             end = this.result.findIndex(check);
             this.currentResult = this.result.slice(start, end);
+            // 当切换到学生画像时不显示表格
+            if (this.currentResult.length === 0) {
+                this.show = 0;
+            } else {
+                this.show = 1;
+            }
+        },
+        // 点击退出时调用,将sessionstorage清空,并返回登陆页
+        logout() {
+            sessionStorage.clear();
+            this.$router.push("login");
+        },
+        exceed(files, filelist) {
+            this.$message.warning(
+                `需要的佐证材料最多三个,已上传${filelist.length}个`
+            );
+        },
+        uploadSuccess(res, files, fileList) {
+            this.fileList.push({ name: res.data.fileName, url: res.data.url });
         },
     },
 };

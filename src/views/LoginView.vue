@@ -65,6 +65,7 @@
                             v-model="formData.xh"
                             placeholder="请输入学号"
                             :clearable="true"
+                            autofocus="true"
                         >
                             <i
                                 slot="prefix"
@@ -80,6 +81,7 @@
                             v-model="formData.studentPwd"
                             placeholder="请输入密码"
                             :clearable="true"
+                            @keyup.enter.native="onSubmit"
                         >
                             <i
                                 slot="prefix"
@@ -137,7 +139,25 @@ export default {
         };
     },
     methods: {
+        // 点击登陆按钮时调用
         login(ruleForm) {
+            this.$refs["ruleForm"].validate((valid) => {
+                if (valid) {
+                    studentLogin(this.formData).then((res) => {
+                        if (res.msg === "成功") {
+                            sessionStorage.xh = res.data.xh;
+                            sessionStorage.name = res.data.studentName;
+                            sessionStorage.token = res.data.token;
+                            this.$router.push("/");
+                        } else {
+                            alert(res.msg);
+                        }
+                    });
+                }
+            });
+        },
+        // 当在密码框按回车时调用,提交表单
+        onSubmit(ruleForm) {
             this.$refs["ruleForm"].validate((valid) => {
                 if (valid) {
                     studentLogin(this.formData).then((res) => {
