@@ -262,7 +262,20 @@
                                 label="佐证资料"
                                 width="200"
                                 align="center"
-                            />
+                            >
+                                <template v-slot="scope">
+                                    <div
+                                        v-for="item in scope.row.attachmentList"
+                                        :key="item.url"
+                                    >
+                                        <a
+                                            target="_blank"
+                                            :href="`${Appurl}/${item.url}`"
+                                            >{{ item.fileName }}</a
+                                        >
+                                    </div>
+                                </template>
+                            </el-table-column>
                             <el-table-column
                                 label="操作"
                                 width="300"
@@ -292,9 +305,19 @@
                                     <el-form-item>
                                         <el-upload
                                             :file-list="fileList"
+                                            :show-file-list="false"
                                             class="upload-demo"
                                             :action="uploadurl"
-                                            :on-success="uploadSuccess"
+                                            :on-success="
+                                                (res, file, fileList) => {
+                                                    uploadSuccess(
+                                                        res,
+                                                        file,
+                                                        fileList,
+                                                        scope.row
+                                                    );
+                                                }
+                                            "
                                             :on-exceed="exceed"
                                             :headers="myheader"
                                             :limit="3"
@@ -419,6 +442,7 @@ export default {
             num: 0, // 得分
             textarea: "", // 文本域
             fileList: [], // 上传文件
+            Appurl: SERVER_BASE_URL,
             uploadurl: SERVER_BASE_URL + "/attachment/upload", // 上传文件的url
             myheader: { token: sessionStorage.token },
 
@@ -553,8 +577,12 @@ export default {
                 `需要的佐证材料最多三个,已上传${filelist.length}个`
             );
         },
-        uploadSuccess(res, files, fileList) {
-            this.fileList.push({ name: res.data.fileName, url: res.data.url });
+        // 上传文件成功时
+        uploadSuccess(res, files, fileList, row) {
+            row.attachmentList.push({
+                fileName: res.data.fileName,
+                url: res.data.url,
+            });
         },
     },
 };
