@@ -99,10 +99,10 @@
 }
 // primary类型按钮
 .priButton {
-    width: 60px;
+    width: 80px;
     height: 33px;
     padding-top: 10px;
-    padding-left: 16px;
+    padding-left: 20px;
 }
 /* 总分 */
 .percent {
@@ -244,6 +244,7 @@
                                 background: 'rgb(250, 250, 250)',
                                 textAlign: 'center',
                             }"
+                            :span-method="arrSpanMethod"
                         >
                             <el-table-column
                                 prop="pointName"
@@ -270,9 +271,14 @@
                                     >
                                         <a
                                             target="_blank"
-                                            :href="`${Appurl}/${item.url}`"
+                                            :href="`${SERVER_BASE_URL}/${item.url}`"
                                             >{{ item.fileName }}</a
                                         >
+                                        <i
+                                            class="iconfont icon-roundclose"
+                                            style="cursor: pointer"
+                                            @click="deleteUpload(scope.row)"
+                                        ></i>
                                     </div>
                                 </template>
                             </el-table-column>
@@ -288,6 +294,9 @@
                                                 v-model="scope.row.selfScore"
                                                 :min="0"
                                                 :max="100"
+                                                :disabled="
+                                                    scope.row.status == 1
+                                                "
                                                 controls-position="right"
                                             />
                                         </div>
@@ -299,6 +308,9 @@
                                                 v-model="scope.row.detail"
                                                 :rows="2"
                                                 type="textarea"
+                                                :disabled="
+                                                    scope.row.status == 1
+                                                "
                                             />
                                         </div>
                                     </el-form-item>
@@ -334,10 +346,18 @@
                             </el-table-column>
                         </el-table>
                         <div class="saveAndCommit">
-                            <el-button type="primary" class="save priButton"
+                            <el-button
+                                type="primary"
+                                class="save priButton"
+                                :loading="isSaving"
+                                @click="saveData()"
                                 >保存</el-button
                             >
-                            <el-button type="primary" class="priButton"
+                            <el-button
+                                type="primary"
+                                class="priButton"
+                                :loading="isCommit"
+                                @click="commitData()"
                                 >提交</el-button
                             >
                         </div>
@@ -355,106 +375,36 @@
 
 <script>
 import { getGradeYears } from "@/utils/student";
-import { getEvaluateByYear } from "@/utils/student";
+import { getEvaluateByYear, saveResult, commitResult } from "@/utils/student";
 import { SERVER_BASE_URL } from "@/utils/server";
-
+import "@/assets/iconfont/iconfont.css";
 export default {
     name: "HomeView",
     components: {},
     data() {
         return {
             // 学年
-            options: [
-                {
-                    value: "option1",
-                },
-                {
-                    value: "option2",
-                },
-                {
-                    value: "option3",
-                },
-                {
-                    value: "option4",
-                },
-                {
-                    value: "option5",
-                },
-            ],
+            options: [],
             value: "", // 年份选择框v-model
-            tableData: [
-                {
-                    date: "2016-05-03",
-                    name: "Tom",
-                    address: "No. 189, Grove St, Los Angeles",
-                },
-                {
-                    date: "2016-05-02",
-                    name: "Tom",
-                    address: "No. 189, Grove St, Los Angeles",
-                },
-                {
-                    date: "2016-05-04",
-                    name: "Tom",
-                    address: "No. 189, Grove St, Los Angeles",
-                },
-                {
-                    date: "2016-05-01",
-                    name: "Tom",
-                    address: "No. 189, Grove St, Los Angeles",
-                },
-                {
-                    date: "2016-05-08",
-                    name: "Tom",
-                    address: "No. 189, Grove St, Los Angeles",
-                },
-                {
-                    date: "2016-05-06",
-                    name: "Tom",
-                    address: "No. 189, Grove St, Los Angeles",
-                },
-                {
-                    date: "2016-05-07",
-                    name: "Tom",
-                    address: "No. 189, Grove St, Los Angeles",
-                },
-                {
-                    date: "2016-05-07",
-                    name: "Tom",
-                    address: "No. 189, Grove St, Los Angeles",
-                },
-                {
-                    date: "2016-05-07",
-                    name: "Tom",
-                    address: "No. 189, Grove St, Los Angeles",
-                },
-                {
-                    date: "2016-05-07",
-                    name: "Tom",
-                    address: "No. 189, Grove St, Los Angeles",
-                },
-                {
-                    date: "2016-05-07",
-                    name: "Tom",
-                    address: "No. 189, Grove St, Los Angeles",
-                },
-            ],
+            tableData: [],
             num: 0, // 得分
             textarea: "", // 文本域
             fileList: [], // 上传文件
-            Appurl: SERVER_BASE_URL,
+            SERVER_BASE_URL: SERVER_BASE_URL,
             uploadurl: SERVER_BASE_URL + "/attachment/upload", // 上传文件的url
             myheader: { token: sessionStorage.token },
 
             xh: "",
             name: "",
             token: "",
-            gradeYear: "1",
+            gradeYear: "2023-2024学年",
             show: 1, // 当接口有数据时显示表格内容
             result: "", // 存放从接口获取的所有数据
             tabIndex: "1", // menu当前选择的index
             total: "", // 总分
             currentResult: [], // 存放接口数据截取完的数据,将数据展示在页面
+            isSaving: false, // 是否正在保存
+            isCommit: false, // 是否正在提交
         };
     },
     mounted() {
@@ -579,10 +529,79 @@ export default {
         },
         // 上传文件成功时
         uploadSuccess(res, files, fileList, row) {
+            console.log(row.attachmentList);
             row.attachmentList.push({
                 fileName: res.data.fileName,
                 url: res.data.url,
+                fileCount: fileList.length,
             });
+        },
+        // 上传文件后点击删除按钮进行删除
+        deleteUpload(row) {
+            row.attachmentList.splice(row.attachmentList.fileCount, 1);
+        },
+        // 将表格最后一行合并
+        arrSpanMethod({ row, column, rowIndex, columnIndex }) {
+            // 如果是最后一行
+            if (rowIndex === this.currentResult.length - 1) {
+                // 最后一行的第一列合并四列单元格
+                if (columnIndex === 0) {
+                    return [1, 4];
+                } else {
+                    return [0, 0];
+                }
+            }
+        },
+        // 点击保存时调用
+        saveData() {
+            this.isSaving = true;
+            this.saveText = "正在保存";
+            this.$confirm("确认要保存吗", "提示", {
+                confirmButtonText: "保存",
+                cancelButtonText: "取消保存",
+            })
+                .then(() => {
+                    let data = {
+                        studentId: this.xh,
+                        gradeYear: this.gradeYear,
+                        scoreList: this.result,
+                    };
+                    saveResult(data).then((res) => {
+                        this.$message.success("保存成功");
+                        this.isSaving = false;
+                        this.saveText = "保存";
+                    });
+                })
+                .catch(() => {
+                    this.$message.warning("保存已取消");
+                    this.isSaving = false;
+                    this.saveText = "保存";
+                });
+        },
+        // 点击提交时调用
+        commitData() {
+            this.isCommit = true;
+            this.$confirm("确认要提交吗", "提示", {
+                confirmButtonText: "提交",
+                cancelButtonText: "取消提交",
+            })
+                .then(() => {
+                    let data = {
+                        studentId: this.xh,
+                        gradeYear: this.gradeYear,
+                        scoreList: this.result,
+                    };
+                    commitResult(data).then((res) => {
+                        this.$message.success("提交成功");
+                        this.isCommit = false;
+                        this.saveText = "提交";
+                    });
+                })
+                .catch(() => {
+                    this.$message.warning("提交已取消");
+                    this.isCommit = false;
+                    this.saveText = "提交";
+                });
         },
     },
 };

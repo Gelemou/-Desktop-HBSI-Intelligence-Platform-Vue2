@@ -15,3 +15,11 @@ export const getGradeYears = function (params) {
 export const getEvaluateByYear = function (params) {
     return POST("/score/detail", params);
 };
+// 保存数据
+export const saveResult = function (params) {
+    return POST("/score/save", params);
+};
+// 提交数据
+export const commitResult = function (params) {
+    return POST("/score/commit", params);
+};

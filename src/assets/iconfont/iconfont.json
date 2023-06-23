@@ -1,0 +1,16 @@
+{
+  "id": "4134897",
+  "name": "第二课堂智慧平台",
+  "font_family": "iconfont",
+  "css_prefix_text": "icon-",
+  "description": "",
+  "glyphs": [
+    {
+      "icon_id": "679806",
+      "name": "round_close",
+      "font_class": "roundclose",
+      "unicode": "e6ed",
+      "unicode_decimal": 59117
+    }
+  ]
+}
