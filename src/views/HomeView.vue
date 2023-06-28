@@ -153,6 +153,8 @@
 }
 // 雷达图
 #echarts {
+    width: 600px;
+    height: 404px;
     margin: 10px auto;
 }
 </style>
@@ -277,7 +279,13 @@
                                         <i
                                             class="iconfont icon-roundclose"
                                             style="cursor: pointer"
-                                            @click="deleteUpload(scope.row)"
+                                            @click="
+                                                deleteUpload(
+                                                    scope.row,
+                                                    item,
+                                                    fileList
+                                                )
+                                            "
                                         ></i>
                                     </div>
                                 </template>
@@ -320,6 +328,7 @@
                                             :show-file-list="false"
                                             class="upload-demo"
                                             :action="uploadurl"
+                                            multiple
                                             :on-success="
                                                 (res, file, fileList) => {
                                                     uploadSuccess(
@@ -362,11 +371,7 @@
                             >
                         </div>
                     </div>
-                    <div
-                        id="echarts"
-                        v-show="!show"
-                        style="width: 600px; height: 404px"
-                    ></div>
+                    <div id="echarts" v-show="!show"></div>
                 </div>
             </div>
         </div>
@@ -405,6 +410,7 @@ export default {
             currentResult: [], // 存放接口数据截取完的数据,将数据展示在页面
             isSaving: false, // 是否正在保存
             isCommit: false, // 是否正在提交
+            echartsArr: [], // 用于接收分数
         };
     },
     mounted() {
@@ -434,16 +440,7 @@ export default {
                 {
                     name: "Budget vs spending",
                     type: "radar",
-                    data: [
-                        {
-                            value: [4200, 3000, 20000, 35000, 50000, 18000],
-                            name: "Allocated Budget",
-                        },
-                        {
-                            value: [5000, 14000, 28000, 26000, 42000, 21000],
-                            name: "Actual Spending",
-                        },
-                    ],
+                    data: [{ value: [] }],
                 },
             ],
         };
@@ -482,6 +479,7 @@ export default {
                 if (res.msg === "成功") {
                     this.result = res.data.list;
                     this.total = res.data.score;
+                    this.echartsArr = [];
                     this.selectData();
                 }
             });
@@ -516,29 +514,40 @@ export default {
             } else {
                 this.show = 1;
             }
+            // 如果是学生画像调用函数,对数据进行二次处理
+            if (this.tabIndex == 6) {
+                this.echartsData();
+            }
         },
         // 点击退出时调用,将sessionstorage清空,并返回登陆页
         logout() {
             sessionStorage.clear();
-            this.$router.push("login");
+            this.$router.push("/login");
         },
-        exceed(files, filelist) {
+        // 当上传文件超出规定的个数后弹出提示
+        exceed(files, fileList) {
             this.$message.warning(
-                `需要的佐证材料最多三个,已上传${filelist.length}个`
+                `需要的佐证材料最多三个,已上传${fileList.length}个`
             );
         },
         // 上传文件成功时
         uploadSuccess(res, files, fileList, row) {
-            console.log(row.attachmentList);
             row.attachmentList.push({
                 fileName: res.data.fileName,
                 url: res.data.url,
-                fileCount: fileList.length,
+                id: fileList.length,
             });
         },
         // 上传文件后点击删除按钮进行删除
-        deleteUpload(row) {
-            row.attachmentList.splice(row.attachmentList.fileCount, 1);
+        deleteUpload(row, item) {
+            for (let i = 0; i < row.attachmentList.length; i++) {
+                if (row.attachmentList[i].id === item.id) {
+                    row.attachmentList.splice(i, 1);
+                    return;
+                } else {
+                    continue;
+                }
+            }
         },
         // 将表格最后一行合并
         arrSpanMethod({ row, column, rowIndex, columnIndex }) {
@@ -602,6 +611,49 @@ export default {
                     this.isCommit = false;
                     this.saveText = "提交";
                 });
+        },
+        // 当切换到学生画像时调用,将echarts雷达图静态数据换成动态数据
+        echartsData() {
+            // 先对数据进行裁剪
+            for (let i = 1; i <= 5; i++) {
+                // 定义每一项的总分
+                let sum = 0;
+                let index = i;
+                let start, end;
+                // 使用startsWith()方法判断接口的itemName是否是menu-item当前选择的index,结果会返回boolean值
+                function check(item) {
+                    return item.itemName.startsWith(index);
+                }
+                // findIndex()方法有一个参数是check函数,返回第一个符合参数验证的下标
+                start = this.result.findIndex(check);
+                index++;
+                end = this.result.findIndex(check);
+                this.currentResult = this.result.slice(start, end);
+                for (let j = 0; j < this.currentResult.length; j++) {
+                    switch (j) {
+                        case 0:
+                            sum += this.currentResult[j].selfScore * 0.4;
+                            break;
+                        case 1:
+                            sum += this.currentResult[j].selfScore * 0.3;
+                            break;
+                        case 2:
+                            sum += this.currentResult[j].selfScore * 0.1;
+                            break;
+                        case 3:
+                            sum += this.currentResult[j].selfScore * 0.1;
+                            break;
+                        case 4:
+                            sum += this.currentResult[j].selfScore * 0.1;
+                            break;
+                    }
+                }
+                this.echartsArr.push(sum);
+            }
+            let map = this.$echarts.init(document.getElementById("echarts"));
+            let option = map.getOption();
+            option.series[0].data[0].value = this.echartsArr;
+            map.setOption(option, true);
         },
     },
 };
