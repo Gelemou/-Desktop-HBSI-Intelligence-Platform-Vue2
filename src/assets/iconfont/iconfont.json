@@ -6,6 +6,69 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "1224913",
+      "name": "download",
+      "font_class": "download",
+      "unicode": "e6a5",
+      "unicode_decimal": 59045
+    },
+    {
+      "icon_id": "10678434",
+      "name": "search",
+      "font_class": "search",
+      "unicode": "e6e1",
+      "unicode_decimal": 59105
+    },
+    {
+      "icon_id": "13226551",
+      "name": "baseline-add_circle_outline-24px",
+      "font_class": "baseline-add_circle_outline-px",
+      "unicode": "e677",
+      "unicode_decimal": 58999
+    },
+    {
+      "icon_id": "15838548",
+      "name": "upload",
+      "font_class": "upload",
+      "unicode": "e682",
+      "unicode_decimal": 59010
+    },
+    {
+      "icon_id": "1135",
+      "name": "竖状图",
+      "font_class": "shuzhuangtu",
+      "unicode": "e600",
+      "unicode_decimal": 58880
+    },
+    {
+      "icon_id": "4765852",
+      "name": "reload",
+      "font_class": "reload",
+      "unicode": "e788",
+      "unicode_decimal": 59272
+    },
+    {
+      "icon_id": "6607697",
+      "name": "ico_数据统计_工作量统计",
+      "font_class": "ico_shujutongji_gongzuoliangtongji",
+      "unicode": "e901",
+      "unicode_decimal": 59649
+    },
+    {
+      "icon_id": "8300815",
+      "name": "审核",
+      "font_class": "shenhe",
+      "unicode": "e602",
+      "unicode_decimal": 58882
+    },
+    {
+      "icon_id": "36103520",
+      "name": "人员设置",
+      "font_class": "a-xingzhuang16",
+      "unicode": "e62b",
+      "unicode_decimal": 58923
+    },
+    {
       "icon_id": "679806",
       "name": "round_close",
       "font_class": "roundclose",
