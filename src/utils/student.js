@@ -23,3 +23,7 @@ export const saveResult = function (params) {
 export const commitResult = function (params) {
     return POST("/score/commit", params);
 };
+// 雷达图
+export const radarChart = (params) => {
+    return POST("/score/radarChart", params);
+};

@@ -37,3 +37,15 @@ axios.interceptors.response.use(
 export const POST = (url, params) => {
     return axios.post(url, params).then((res) => res.data);
 };
+// 封装一个导出接口
+export const BLOB = (url, params) => {
+    return axios({
+        url: url,
+        method: "post",
+        params: params,
+        headers: {
+            token: "eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiJiNmFhMGFmOS00NGU4LTQxZWYtOWFkMS1lZjU0ZDE1MjE2ODQiLCJzdWIiOiIyIzE2ODg0NTUwMTgzMzEiLCJpc3MiOiLnmb3mtIvmt4AiLCJpYXQiOjE2ODg0NTUwMTgsImV4cCI6MTY4ODU0MTQxOH0.YjWZLdMgXXUPx5rMHq_y21cVgJHNpEXbIwK2Sp15dWU",
+        },
+        responseType: "blob",
+    }).then((res) => res.data);
+};
