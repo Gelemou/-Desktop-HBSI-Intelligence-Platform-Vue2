@@ -380,7 +380,12 @@
 
 <script>
 import { getGradeYears } from "@/utils/student";
-import { getEvaluateByYear, saveResult, commitResult } from "@/utils/student";
+import {
+    getEvaluateByYear,
+    saveResult,
+    commitResult,
+    radarChart,
+} from "@/utils/student";
 import { SERVER_BASE_URL } from "@/utils/server";
 import "@/assets/iconfont/iconfont.css";
 export default {
@@ -427,7 +432,16 @@ export default {
         // echarts雷达图设置
         var myChart = this.$echarts.init(document.getElementById("echarts"));
         var option = {
+            // 鼠标悬浮显示数据
+            tooltip: {
+                trigger: "axis",
+            },
+            // 图例组件
+            // legend: {
+            //     data: [this.name],
+            // },
             radar: {
+                // 设置维度
                 indicator: [
                     { name: "思想政治素养", max: 100 },
                     { name: "职业技能特长", max: 100 },
@@ -436,11 +450,17 @@ export default {
                     { name: "劳动育人实践", max: 100 },
                 ],
             },
+            emphasis: {},
             series: [
                 {
-                    name: "Budget vs spending",
+                    name: `${this.name}`,
                     type: "radar",
+                    tooltip: {
+                        trigger: "item",
+                    },
                     data: [{ value: [] }],
+                    // 设置中心颜色,空则自动填充
+                    areaStyle: {},
                 },
             ],
         };
@@ -614,46 +634,21 @@ export default {
         },
         // 当切换到学生画像时调用,将echarts雷达图静态数据换成动态数据
         echartsData() {
-            // 先对数据进行裁剪
-            for (let i = 1; i <= 5; i++) {
-                // 定义每一项的总分
-                let sum = 0;
-                let index = i;
-                let start, end;
-                // 使用startsWith()方法判断接口的itemName是否是menu-item当前选择的index,结果会返回boolean值
-                function check(item) {
-                    return item.itemName.startsWith(index);
-                }
-                // findIndex()方法有一个参数是check函数,返回第一个符合参数验证的下标
-                start = this.result.findIndex(check);
-                index++;
-                end = this.result.findIndex(check);
-                this.currentResult = this.result.slice(start, end);
-                for (let j = 0; j < this.currentResult.length; j++) {
-                    switch (j) {
-                        case 0:
-                            sum += this.currentResult[j].selfScore * 0.4;
-                            break;
-                        case 1:
-                            sum += this.currentResult[j].selfScore * 0.3;
-                            break;
-                        case 2:
-                            sum += this.currentResult[j].selfScore * 0.1;
-                            break;
-                        case 3:
-                            sum += this.currentResult[j].selfScore * 0.1;
-                            break;
-                        case 4:
-                            sum += this.currentResult[j].selfScore * 0.1;
-                            break;
+            radarChart({ studentId: this.xh, gradeYear: this.gradeYear }).then(
+                (res) => {
+                    if (res.msg === "成功") {
+                        this.echartsArr.push(...res.data);
+                        let map = this.$echarts.init(
+                            document.getElementById("echarts")
+                        );
+                        let option = map.getOption();
+                        option.series[0].data[0].value = this.echartsArr;
+                        map.setOption(option, true);
+                    } else {
+                        return;
                     }
                 }
-                this.echartsArr.push(sum);
-            }
-            let map = this.$echarts.init(document.getElementById("echarts"));
-            let option = map.getOption();
-            option.series[0].data[0].value = this.echartsArr;
-            map.setOption(option, true);
+            );
         },
     },
 };
